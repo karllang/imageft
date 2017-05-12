@@ -12,10 +12,6 @@ How to get the FT-correction from microscopic images taken parallel and perpendi
 5. The outline of the grain perpendicular to the crystallographic c-axis will be traced. Adjust it if necessary.
 6. The Ft-values of broken grains can be estimated. If this is applicable to your grain, you can use the mouse to add some missing pieces of the grain (draw a polygon overlapping with the grain outline). Looks like this:
 
-￼
-
 Note that the FT is calculated assuming some mean U/Th/Sm ratios. This is good to get an idea of the FT. To get the correct FT required for the final age calculation you have to change ‚r232_238‘ and ‚r147_238‘ to measured values derived from the ICP-MS.
 
 Led me know if you have any idea to make this code more user-friendly. 
-
-A GUI-Version may be ready at the EGU 2017!
