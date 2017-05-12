@@ -1,5 +1,4 @@
 # imageft
-repository for imageft development
 
 C. Glotzbach (07.03.2017)
 
