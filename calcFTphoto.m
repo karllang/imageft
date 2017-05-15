@@ -1,4 +1,4 @@
-function [ft,mass,matrix_3D]=calcFTphoto(mineral,file1,file2,R,res,r232_238,r147_238)
+function [Ft_ana,Ft_num,mass_ana,mass_num,matrix_3D,image1_rot,image2]=calcFTphoto(mineral,file1,file2,R,res,r232_238,r147_238,image1_rot,image2)
 % script to calculate Ft-values and mass of (intact, broken) apatite or zircon 
 % grains from microscope pictures taken parallel and perpendicular to the 
 % crystallographic c-axis (Jan/2017)
@@ -19,85 +19,102 @@ function [ft,mass,matrix_3D]=calcFTphoto(mineral,file1,file2,R,res,r232_238,r147
 
 
 % do not change from here on, 
-
-% read image with crystal parallel to c
 smooth=1; % 1 for smoothing, 0 for original image
-disp(' ')
-disp('Find outline of grain')
-[image1,area1,perimeter1,max_l1,min_l1,orientation1,level1,center]=trace_grain_res(file1,R,res,smooth);
-str='1';
-while str=='1' | str=='2'
-    prompt = 'press (return) if OK, press (1) or (2) to repeat tracing with lower or higher treshold or do manual tracing (3): ';
-    str = input(prompt,'s');
-    switch str
-        case '1'
-            level1=level1*0.75;
-            [image1,area1,perimeter1,max_l1,min_l1,orientation1,center]=trace_grain_res_level(file1,R,res,level1,smooth);
-        case '2'
-            level1=level1/0.75;
-            [image1,area1,perimeter1,max_l1,min_l1,orientation1,center]=trace_grain_res_level(file1,R,res,level1,smooth);
-        case '3'
-            [image1,area1,perimeter1,max_l1,min_l1,orientation1,center]=trace_grain_res_manu(file1,R,res);
+% if image has been read before skip
+if isempty(image1_rot)
+    % read image with crystal parallel to c
+    disp(' ')
+    disp('Find outline of grain')
+    [image1,area1,perimeter1,max_l1,min_l1,orientation1,level1,center]=trace_grain_res(file1,R,res,smooth);
+    str='1';
+    while str=='1' | str=='2'
+        prompt = 'press (return) if OK, press (1) or (2) to repeat tracing with lower or higher treshold or do manual tracing (3): ';
+        str = input(prompt,'s');
+        switch str
+            case '1'
+                level1=level1*0.9;
+                [image1,area1,perimeter1,max_l1,min_l1,orientation1,center]=trace_grain_res_level(file1,R,res,level1,smooth);
+            case '2'
+                level1=level1/0.9;
+                [image1,area1,perimeter1,max_l1,min_l1,orientation1,center]=trace_grain_res_level(file1,R,res,level1,smooth);
+            case '3'
+                [image1,area1,perimeter1,max_l1,min_l1,orientation1,center]=trace_grain_res_manu(file1,R,res);
+        end
     end
-end
-% show automatically defined c-axis and change if neccessary, end by
-% double-click
-slope=tand(orientation1.Orientation);
-intercept=center.Centroid(1)-slope*(size(image1,1)-center.Centroid(2));
-x1=center.Centroid(1)-100;
-x2=center.Centroid(1)+100;
-y1=size(image1,1)-(slope*x1+intercept);
-y2=size(image1,1)-(slope*x2+intercept);
-if y1>size(image1,1) | y2>size(image1,1) | y1<0 | y2<0
-    y1=200;
-    y2=200;
-end
-h = imline(gca, [x1 x2],[y1 y2]);
-setColor(h,[0 1 0]);
-id = addNewPositionCallback(h,@(pos) title(mat2str(pos,3)));
-% After observing the callback behavior, remove the callback.
-% using the removeNewPositionCallback API function.     
-removeNewPositionCallback(h,id);
-position = wait(h);
-
-% recalculate the c-axis
-disp('automatic orientation:')
-orientation1.Orientation
-orientation1.Orientation=-atand((position(1,2)-position(2,2))/(position(1,1)-position(2,1)));
-disp('manually corrected orientation:')
-orientation1.Orientation
-
-disp(' ')
-
-% read image with crystal perpendicular to c
-disp(' ')
-disp('Find outline of grain')
-[image2,area2,perimeter2,max_l2,min_l2,orientation2,level2]=trace_grain_res(file2,R,res,smooth);
-str='1';
-while str=='1' | str=='2'
-    prompt = 'press (return) if OK, press (1) or (2) to repeat tracing with lower or higher treshold or do manual tracing (3): ';
-    str = input(prompt,'s');
-    switch str
-        case '1'
-            level2=level2*0.75;
-            [image2,area2,perimeter2,max_l2,min_l2,orientation2]=trace_grain_res_level(file2,R,res,level2,smooth);
-        case '2'
-            level2=level2/0.75;
-            [image2,area2,perimeter2,max_l2,min_l2,orientation2]=trace_grain_res_level(file2,R,res,level2,smooth);
-        case '3'
-            [image2,area2,perimeter2,max_l2,min_l2,orientation2]=trace_grain_res_manu(file2,R,res);
+    % show automatically defined c-axis and change if neccessary, end by
+    % double-click
+    slope=tand(orientation1.Orientation);
+    intercept=center.Centroid(1)-slope*(size(image1,1)-center.Centroid(2));
+    x1=center.Centroid(1)-100;
+    x2=center.Centroid(1)+100;
+    y1=size(image1,1)-(slope*x1+intercept);
+    y2=size(image1,1)-(slope*x2+intercept);
+    if y1>size(image1,1) | y2>size(image1,1) | y1<0 | y2<0
+        y1=200;
+        y2=200;
     end
-end
-disp(' ')
+    h = imline(gca, [x1 x2],[y1 y2]);
+    setColor(h,[0 1 0]);
+    id = addNewPositionCallback(h,@(pos) title(mat2str(pos,3)));
+    % After observing the callback behavior, remove the callback.
+    % using the removeNewPositionCallback API function.     
+    removeNewPositionCallback(h,id);
+    position = wait(h);
 
-% rotate image1 by orientation1 and determine starting point and length
-% perpendicular to the c-axis
-image1_rot=imrotate(image1,-orientation1.Orientation);
+    % recalculate the c-axis
+    disp('automatic orientation:')
+    orientation1.Orientation
+    orientation1.Orientation=-atand((position(1,2)-position(2,2))/(position(1,1)-position(2,1)));
+    disp('manually corrected orientation:')
+    orientation1.Orientation
+    
+    % rotate image1 by orientation1
+    image1_rot=imrotate(image1,-orientation1.Orientation);
+
+    disp(' ')
+end
+
+% if image has been read before skip
+if isempty(image2)
+    % read image with crystal perpendicular to c
+    disp(' ')
+    disp('Find outline of grain')
+    [image2,area2,perimeter2,max_l2,min_l2,orientation2,level2]=trace_grain_res(file2,R,res,smooth);
+    str='1';
+    while str=='1' | str=='2'
+        prompt = 'press (return) if OK, press (1) or (2) to repeat tracing with lower or higher treshold or do manual tracing (3): ';
+        str = input(prompt,'s');
+        switch str
+            case '1'
+                level2=level2*0.75;
+                [image2,area2,perimeter2,max_l2,min_l2,orientation2]=trace_grain_res_level(file2,R,res,level2,smooth);
+            case '2'
+                level2=level2/0.75;
+                [image2,area2,perimeter2,max_l2,min_l2,orientation2]=trace_grain_res_level(file2,R,res,level2,smooth);
+            case '3'
+                [image2,area2,perimeter2,max_l2,min_l2,orientation2]=trace_grain_res_manu(file2,R,res);
+        end
+    end
+    disp(' ')
+end
+
+% get width of grain perpendicular to orientation1
 pixels=regionprops(image1_rot,'PixelList');
 image1_rot_first_x=min(pixels.PixelList(:,1));
+image1_rot_last_x=max(pixels.PixelList(:,1));
 image1_rot_first_y=min(pixels.PixelList(:,2));
-image1_rot_last_y=max(pixels.PixelList(:,2));
-min_l1.MinorAxisLength=image1_rot_last_y-image1_rot_first_y;
+o=0;
+for i=image1_rot_first_x:image1_rot_last_x
+    first_y=find(image1_rot(:,i)==1,1,'first');
+    last_y=find(image1_rot(:,i)==1,1,'last');
+    o=o+1;
+    width(o)=last_y-first_y;
+end
+[cdf,x_cdf] = ecdf(width);
+[minC,minI]=min(abs(cdf-1));
+min_l1.MinorAxisLength=x_cdf(minI);
+min_l1.MinorAxisLength1=min_l1.MinorAxisLength*(R/res)
+max_l1.MajorAxisLength1=(image1_rot_last_x-image1_rot_first_x)*(R/res)
 
 % find orientation of parallel image(s) in relation to perpendicular image
 prec=2;
@@ -107,6 +124,30 @@ for i=prec:prec:180
     dist_x(i/2)=max(pixels.PixelList(:,1))-min(pixels.PixelList(:,1));
 end
 [dist,angle_par2b]=min(abs(dist_x-min_l1.MinorAxisLength));
+min_l2.MinorAxisLength=min(dist_x);
+min_l2.MinorAxisLength1=min(dist_x)*(R/res);
+max_l2.MajorAxisLength=max(dist_x);
+max_l2.MajorAxisLength1=max(dist_x)*(R/res);
+
+% analytic calculatation of the Ft and mass
+prompt = 'Grain geometry, type A for ellipsoid or D for hexagonal: ';
+strGeo = input(prompt,'s');
+switch strGeo
+    case 'A'
+        geometry='ellipsoid (A)';
+        param.a={num2str(max_l1.MajorAxisLength1/2)};
+        param.b={num2str(max_l2.MajorAxisLength1/2)};
+        param.c={num2str(min_l2.MinorAxisLength1/2)}
+    case 'D'
+        geometry='hexagonal (D)';
+        param.H={num2str(max_l1.MajorAxisLength1)};
+        param.W={num2str(max_l2.MajorAxisLength1)};
+        param.L={num2str(min_l2.MinorAxisLength1)}
+        param.Np=2;
+end
+[Fts_analytical,V_analytical] = calc_Ft(mineral,geometry,param);
+
+
 
 
 % make 3D model of two pictures
@@ -116,11 +157,12 @@ image2_rot = imrotate(image2,angle_par2b*prec);
 pixels=regionprops(image2_rot,'PixelList');
 image2_rot_width=max(pixels.PixelList(:,1))-min(pixels.PixelList(:,1));
 % make 3D model
+max_l1=regionprops(image1_rot,'MajorAxisLength');
 max_x=round(max_l1.MajorAxisLength)+400;
 max_y=round(min_l1.MinorAxisLength)+100;
 max_z=round(max_l2.MajorAxisLength)+200;
 matrix_3D=zeros(max_x,max_y,max_z);
-% go along the x-axis of image1_rot and add ones to 3D matrix with shape of
+% go along the x-axis of image1_rot and add '1' to 3D matrix with shape of
 % image2_rot
 area=0;
 for i=1:size(image1_rot,2)
@@ -131,8 +173,6 @@ for i=1:size(image1_rot,2)
         % resize image2_rot
         resize_factor=(i_last(i)-i_first(i))/image2_rot_width;
         image2_rot_resize=imresize(image2_rot,resize_factor);
-        % get area
-        area=area+perimeter1.Perimeter1*resize_factor*(R/res);
         % cut image
         pixels=regionprops(image2_rot_resize,'PixelList');
         if size(pixels,1)>1
@@ -216,6 +256,40 @@ if str=='1'
 end
 disp(' ')
 
+% smooth matrix along the x-axis
+for i=1:size(matrix_3D,1)
+    iBW=squeeze(matrix_3D(i,:,:));
+    if sum(iBW(:))>0
+        BW=edge(squeeze(matrix_3D(i,:,:)));
+        dilatedImage = imdilate(BW,strel('disk',10));
+        thinedImage = bwmorph(dilatedImage,'thin',9);
+        BW2 = imfill(thinedImage,'holes');
+        matrix_3D(i,:,:)=BW2;
+    end
+end
+% smooth matrix along the y-axis
+for i=1:size(matrix_3D,2)
+    iBW=squeeze(matrix_3D(:,i,:));
+    if sum(iBW(:))>0
+        BW=edge(squeeze(matrix_3D(:,i,:)));
+        dilatedImage = imdilate(BW,strel('disk',10));
+        thinedImage = bwmorph(dilatedImage,'thin',inf);
+        BW2 = imfill(thinedImage,'holes');
+        matrix_3D(:,i,:)=BW2;
+    end
+end
+% smooth data along the z-axis
+for i=1:size(matrix_3D,3)
+    iBW=squeeze(matrix_3D(:,:,i));
+    if sum(iBW(:))>0
+        BW=edge(squeeze(matrix_3D(:,:,i)));
+        dilatedImage = imdilate(BW,strel('disk',10));
+        thinedImage = bwmorph(dilatedImage,'thin',inf);
+        BW2 = imfill(thinedImage,'holes');
+        matrix_3D(:,:,i)=BW2;
+    end
+end
+
 
 % get surface area and volume
 volume=sum(matrix_3D(:))*(R/res)^3;
@@ -235,7 +309,7 @@ volume=sum(matrix_3D(:))*(R/res)^3;
 % first take average 
 switch mineral
     case 'ap'
-        mass=volume*1E-4^3*3.2*1E6;
+        mass_num=volume*1E-4^3*3.2*1E6
         sd_238U=18.81;
         sd_235U=21.8;
         sd_232Th=22.25;
@@ -245,7 +319,7 @@ switch mineral
             r147_238=0.0615;
         end
     case 'zr'
-        mass=volume*1E-4^3*4.65*1E6;
+        mass_num=volume*1E-4^3*4.65*1E6
         sd_238U=15.55;
         sd_235U=18.05;
         sd_232Th=18.43;
@@ -275,7 +349,7 @@ Sm147=Sm147/radio_nukl_sum;
 
 % select randomly ne pixel and distort He particles according to the mean 
 % stopping distance and random phi and theta values
-ne=200000; % number of random events
+ne=400000; % number of random events
 ne_nuklide=[round(U238*ne) round(U235*ne) round(Th232*ne) round(Sm147*ne)];
 sd_nuklide=[sd_238U sd_235U sd_232Th sd_147Sm];
 if str=='0'
@@ -289,16 +363,15 @@ else
     [xi,yi,zi]=ind2sub(size(matrix_3D_broken),pixels_n);
     matrix_He=zeros(size(matrix_3D_broken));
 end
-pixels_n=randsample(pixels,ne,'true');
-theta=randsample(360,ne,'true');
-phi=randsample(180,ne,'true');
-n=0;
+theta=2*pi*rand(1,ne);
+phi=acos(2*rand(1,ne)-1);
+u=cos(phi);
 hold on
 for j=1:4
     for i=1:ne_nuklide(j)
-        x = xi(i) + round((sd_nuklide(j)/(R/res) * sind(phi(i)) * cosd(theta(i))));
-        y = yi(i) + round((sd_nuklide(j)/(R/res) * sind(phi(i)) * sind(theta(i))));
-        z = zi(i) + round((sd_nuklide(j)/(R/res) * cosd(phi(i))));
+        x = xi(i) + round(sd_nuklide(j)/(R/res) * sqrt(1-u(i)^2) * cos(theta(i)));
+        y = yi(i) + round(sd_nuklide(j)/(R/res) * sqrt(1-u(i)^2) * sin(theta(i)));
+        z = zi(i) + round(sd_nuklide(j)/(R/res) * u(i)); 
         if x>0 & y>0 & z>0 & x<=size(matrix_He,1) & y<=size(matrix_He,2) & z<=size(matrix_He,3)
             matrix_He(x,y,z)=matrix_He(x,y,z)+1;
         end
@@ -335,13 +408,15 @@ end
 % he_map=squeeze(matrix_He(slice_c_par,1:size(matrix_3D,2),1:size(matrix_3D,3)));
 % grain_map=squeeze(matrix_3D(slice_c_par,1:size(matrix_3D,2),1:size(matrix_3D,3)));
 
+% calculate analytical Ft and mass (based on analytical functions provided 
+% in Ketcham et al. 2011)
+Ft_ana=Fts_analytical.U238*U238+Fts_analytical.U235*U235+Fts_analytical.Th232*Th232+Fts_analytical.Sm147*Sm147
+mass_ana=V_analytical*1E-4^3*3.2*1E6
+
 % determine Ft, how much He-particle retained in the grain
 if str=='0'
-    ft=sum(matrix_He(matrix_3D==1))/ne
+    Ft_num=sum(matrix_He(matrix_3D==1))/ne
 else
-    ft=sum(matrix_He(matrix_3D==1))/sum(matrix_3D(pixels_n)==1)
+    Ft_num=sum(matrix_He(matrix_3D==1))/sum(matrix_3D(pixels_n)==1)
 end
 
-% plot 3D image
-figure
-plot_grain(matrix_3D,0.5)
